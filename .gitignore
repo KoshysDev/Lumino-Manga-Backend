@@ -1,0 +1,43 @@
+# Ignore Virtual Environment
+venv/
+
+# Ignore compiled Python files
+__pycache__/
+
+# Ignore environment-specific files
+.env
+*.log
+
+# Node.js dependencies
+node_modules/
+
+# Vue.js build artifacts
+dist/
+
+# Visual Studio Code settings and workspace
+.vscode/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE-specific files
+.idea/
+
+# Compiled Python files
+*.pyc
+
+# Log files
+*.log
+
+# User-specific files
+*.swp
+
+# Editor backup files
+*~
+
+# Node.js debugging files
+.vscode/
+node_modules/
+npm-debug.log
+yarn-error.log
