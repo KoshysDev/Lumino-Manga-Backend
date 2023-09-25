@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
@@ -43,3 +43,26 @@ def register_user(username: str, email: str, password: str):
     session.commit()
     session.close()
     return {"message": "User registered successfully"}
+
+# Retrieve the user from the database by username
+@app.post("/login")
+def login_user(username: str, password: str):
+    session = SessionLocal()
+    user = session.query(User).filter(User.username == username).first()
+    session.close()
+
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="Username or password is incorrect"
+        )
+
+    # Verify the password
+    if not pwd_context.verify(password, user.hashed_password):
+        raise HTTPException(
+            status_code=401, detail="Username or password is incorrect"
+        )
+
+    # OAuth2 / JWT logic for login here
+
+    return {"message": "Login successful"}
+
