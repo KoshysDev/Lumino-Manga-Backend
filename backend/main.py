@@ -121,7 +121,7 @@ def get_user_profile(current_user: int = Depends(get_current_user)):
 def create_access_token(user_id: int):
     payload = {
         "sub": user_id,
-        "exp": datetime.utcnow() + timedelta(days=30)  # Expiration time
+        "exp": datetime.utcnow() + timedelta(minutes=1)  # Expiration time
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
