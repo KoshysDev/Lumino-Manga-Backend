@@ -1,10 +1,12 @@
 import os
 from fastapi import FastAPI, HTTPException, Depends
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
 from dotenv import load_dotenv
 from models import User
+import jwt
 
 # Load environment variables from .env
 load_dotenv()
@@ -20,6 +22,10 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Define JWT settings
+SECRET_KEY = os.getenv('SECRET_KEY')
+ALGORITHM = "HS256"
 
 @app.post("/register")
 def register_user(username: str, email: str, password: str):
@@ -61,8 +67,19 @@ def login_user(username: str, password: str):
         raise HTTPException(
             status_code=401, detail="Username or password is incorrect"
         )
+    
+    # Generate a JWT token
+    access_token = create_access_token(data={"sub": username})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-    # OAuth2 / JWT logic for login here
+# Create a JWT token with the user's username as the subject (sub)
+def create_access_token(data: dict):
+    # Calculate the expiration time (one month from now)
+    expires = datetime.utcnow() + timedelta(days=30)
 
-    return {"message": "Login successful"}
+    # Add the "exp" claim to the token's payload
+    data["exp"] = expires
 
+    # Encode the token with the expiration time
+    token = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+    return token

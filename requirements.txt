@@ -2,3 +2,5 @@ fastapi[all]
 sqlalchemy 
 databases[postgresql]
 dotenv
+passlib
+pyjwt
