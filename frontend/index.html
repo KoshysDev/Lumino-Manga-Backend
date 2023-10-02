@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Authentication Test</title>
+</head>
+<body>
+    <h1>User Authentication Test</h1>
+
+    <!-- Registration Form -->
+    <h2>Registration</h2>
+    <form id="registration-form" onsubmit="return false;">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required><br>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br>
+
+        <button type="submit">Register</button>
+    </form>
+
+    <!-- Login Form -->
+    <h2>Login</h2>
+    <form id="login-form" onsubmit="return false;">
+        <label for="login-username">Username:</label>
+        <input type="text" id="login-username" name="username" required><br>
+
+        <label for="login-password">Password:</label>
+        <input type="password" id="login-password" name="password" required><br>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <!-- User Profile Section -->
+    <h2>User Profile</h2>
+    <div id="profile" style="display: none;">
+        <p><strong>Username:</strong> <span id="profile-username"></span></p>
+        <p><strong>Email:</strong> <span id="profile-email"></span></p>
+        <!-- Add more user profile fields as needed -->
+        <button id="logout-button">Logout</button>
+    </div>
+
+    <script>
+        const backendURL = 'http://127.0.0.1:8000'; // Replace with your actual backend URL
+        
+        // Function to check if the user is already logged in (when the page loads)
+        async function checkLoginStatus() {
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                // User is logged in; display profile
+                displayUserProfile(token);
+            }else{
+                console.log("no token?");
+            }
+        }
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('access_token');
+            document.getElementById("profile").style.display = "none";
+            // Show login and registration forms again
+            document.getElementById("login-form").style.display = "block";
+            document.getElementById("registration-form").style.display = "block";
+        }
+
+        // Attach a click event listener to the logout button
+        document.getElementById("logout-button").addEventListener("click", logout);
+
+        // Check login status when the page loads
+        checkLoginStatus();
+
+        // Function to display user profile
+        async function displayUserProfile(token) {
+            try {
+                const response = await fetch(`${backendURL}/profile`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 200) {
+                    const userData = await response.json();
+                    document.getElementById("profile-username").textContent = userData.username;
+                    document.getElementById("profile-email").textContent = userData.email;
+                    document.getElementById("profile").style.display = "block";
+                } else {
+                    alert('Failed to fetch user profile');
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+            }
+        }
+
+        // Registration Form
+        const registrationForm = document.getElementById("registration-form");
+        registrationForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById("username").value;
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await fetch(`${backendURL}/register/username=${username}&email=${email}&password=${password}`, {
+                    method: 'GET'
+                });
+
+                if (response.status === 200) {
+                    alert('Registration successful! You can now log in.');
+                } else {
+                    const data = await response.json();
+                    alert(`Registration failed: ${data.detail}`);
+                }
+            } catch (error) {
+                console.error('Error during registration:', error);
+            }
+        });
+
+        // Login Form
+        const loginForm = document.getElementById("login-form");
+        loginForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById("login-username").value;
+            const password = document.getElementById("login-password").value;
+
+            try {
+                const response = await fetch(`${backendURL}/login/username=${username}&password=${password}`, {
+                    method: 'GET'
+                });
+
+                if (response.status === 200) {
+                    const data = await response.json();
+                    alert('Login successful!');
+                    displayUserProfile(data.access_token);
+                    localStorage.setItem('access_token', data.access_token);
+                } else {
+                    const data = await response.json();
+                    alert(`Login failed: ${data.detail}`);
+                }
+            } catch (error) {
+                console.error('Error during login:', error);
+            }
+        });
+    </script>
+      
+</body>
+</html>

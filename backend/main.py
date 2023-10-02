@@ -1,9 +1,11 @@
 import os
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import FastAPI, HTTPException, Depends, Request
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from models import User
 import jwt
@@ -16,6 +18,14 @@ DATABASE_URL = os.getenv('DATABASE_URL')
 
 app = FastAPI()
 
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can replace "*" with your frontend URL for better security
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # SQLAlchemy database setup
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -23,11 +33,14 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Create an instance of OAuth2PasswordBearer
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
 # Define JWT settings
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"
 
-@app.post("/register")
+@app.get("/register/username={username}&email={email}&password={password}")
 def register_user(username: str, email: str, password: str):
     # Check if the username and email are unique
     session = SessionLocal()
@@ -51,8 +64,8 @@ def register_user(username: str, email: str, password: str):
     return {"message": "User registered successfully"}
 
 # Retrieve the user from the database by username
-@app.post("/login")
-def login_user(username: str, password: str):
+@app.get("/login/username={username}&password={password}")
+def login_user(username: str, password: str, request: Request):
     session = SessionLocal()
     user = session.query(User).filter(User.username == username).first()
     session.close()
@@ -68,18 +81,47 @@ def login_user(username: str, password: str):
             status_code=401, detail="Username or password is incorrect"
         )
     
-    # Generate a JWT token
-    access_token = create_access_token(data={"sub": username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    client_host = request.client.host
+    # Generate a JWT token based on user.id
+    access_token = create_access_token(user.id)
+    return {"client_host": client_host, "access_token": access_token, "token_type": "bearer"}
+
+# Function to get the current user based on the JWT token
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload["sub"]
+        return user_id
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Could not validate token")
+
+# Endpoint to get user profile
+@app.get("/profile")
+def get_user_profile(current_user: int = Depends(get_current_user)):
+    session = SessionLocal()
+    user = session.query(User).filter(User.id == current_user).first()
+    session.close()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Convert the user object to a dictionary
+    user_data = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        # Add other fields as needed
+    }
+    
+    return user_data
 
 # Create a JWT token with the user's username as the subject (sub)
-def create_access_token(data: dict):
-    # Calculate the expiration time (one month from now)
-    expires = datetime.utcnow() + timedelta(days=30)
-
-    # Add the "exp" claim to the token's payload
-    data["exp"] = expires
-
-    # Encode the token with the expiration time
-    token = jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(user_id: int):
+    payload = {
+        "sub": user_id,
+        "exp": datetime.utcnow() + timedelta(days=30)  # Expiration time
+    }
+    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token
