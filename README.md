@@ -8,3 +8,4 @@
 
    ```dotenv
    DATABASE_URL=postgresql://your_username:your_password@your_host/your_database
+   SECRET_KEY=(16bit secret key for jwt here)
