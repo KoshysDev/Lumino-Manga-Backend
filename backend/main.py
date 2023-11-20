@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from models import User
 import jwt
 
+#this file must be refactored, after i done main job
+
 # Load environment variables from .env
 load_dotenv()
 
@@ -21,7 +23,7 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can replace "*" with your frontend URL for better security
+    allow_origins=["*"],  # You can replace "*" with your frontend URL
     allow_methods=["*"],
     allow_headers=["*"],
 )

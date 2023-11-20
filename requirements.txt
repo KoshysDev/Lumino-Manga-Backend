@@ -1,6 +1,8 @@
 fastapi[all]
 sqlalchemy 
 databases[postgresql]
-dotenv
+python-dotenv
 passlib
 pyjwt
+psycopg2
+bcrypt
