@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from models import User
+from models import User, MangaDB
 import jwt
 
 #this file must be refactored, after i done main job
