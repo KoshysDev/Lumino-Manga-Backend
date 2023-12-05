@@ -37,9 +37,9 @@
         <button type="submit">Login</button>
     </form>
 
-    <!-- Manga Creation Form -->
-    <h2>Create Manga</h2>
-    <form id="create-manga-form" onsubmit="return false;">
+    <!-- Create Manga Form - Display only when logged in -->
+    <h2 style="display: none;" id="create-manga-title">Create Manga</h2>
+    <form id="create-manga-form" onsubmit="return false" style="display: none;">
         <label for="manga-name">Manga Name:</label>
         <input type="text" id="manga-name" name="name" required><br>
 
@@ -56,6 +56,30 @@
         <input type="file" id="cover-image" name="cover_image" accept="image/*" required><br>
 
         <button type="submit">Create Manga</button>
+    </form>
+
+    <!-- Update Manga Form - Display only when logged in -->
+    <h2 style="display: none;" id="update-manga-title">Update Manga</h2>
+    <form id="update-manga-form" onsubmit="return false" style="display: none;">
+        <label for="update-manga-id">Manga ID for Update:</label>
+        <input type="number" id="update-manga-id" name="manga_id" required><br>
+
+        <label for="update-manga-name">Updated Manga Name:</label>
+        <input type="text" id="update-manga-name" name="name" required><br>
+
+        <label for="update-manga-description">Updated Description:</label>
+        <textarea id="update-manga-description" name="description" required></textarea><br>
+
+        <label for="update-manga-tags">Updated Tags:</label>
+        <input type="text" id="update-manga-tags" name="tags" required><br>
+
+        <label for="update-manga-type">Updated Type:</label>
+        <input type="text" id="update-manga-type" name="manga_type" required><br>
+
+        <label for="update-cover-image">Updated Cover Image:</label>
+        <input type="file" id="update-cover-image" name="cover_image" accept="image/*" required><br>
+
+        <button type="submit">Update Manga</button>
     </form>
 
     <!-- Fetch Manga Form -->
@@ -130,6 +154,10 @@
                     document.getElementById("profile-username").textContent = userData.username;
                     document.getElementById("profile-email").textContent = userData.email;
                     document.getElementById("profile").style.display = "block";
+                    document.getElementById("create-manga-title").style.display = "block";
+                    document.getElementById("create-manga-form").style.display = "block";
+                    document.getElementById("update-manga-title").style.display = "block";
+                    document.getElementById("update-manga-form").style.display = "block";
                 } else {
                     alert('Token has expired');
                     localStorage.removeItem('access_token');
@@ -287,6 +315,47 @@
                 }
             } catch (error) {
                 console.error('Error during manga creation:', error);
+            }
+        });
+
+        // Update Manga Form
+        const updateMangaForm = document.getElementById("update-manga-form");
+        updateMangaForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const mangaId = document.getElementById("update-manga-id").value;
+            const name = document.getElementById("update-manga-name").value;
+            const description = document.getElementById("update-manga-description").value;
+            const tags = document.getElementById("update-manga-tags").value;
+            const mangaType = document.getElementById("update-manga-type").value;
+            const coverImage = document.getElementById("update-cover-image").files[0];
+
+            const token = localStorage.getItem('access_token');
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('description', description);
+            formData.append('tags', tags);
+            formData.append('manga_type', mangaType);
+            formData.append('cover_image', coverImage);
+
+            try {
+                const response = await fetch(`${backendURL}/update_manga/${mangaId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: formData,
+                });
+
+                if (response.status === 200) {
+                    alert('Manga updated successfully!');
+                } else {
+                    const data = await response.json();
+                    alert(`Manga update failed: ${data.detail}`);
+                }
+            } catch (error) {
+                console.error('Error during manga update:', error);
             }
         });
     </script>

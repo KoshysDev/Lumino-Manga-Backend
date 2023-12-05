@@ -150,6 +150,7 @@ def create_manga(
 
     return {"message": "Manga uploaded successfully"}    
 
+# Endpoint for geying manga by id
 @app.get("/manga/{manga_id}")
 def get_manga(manga_id: int):
     session = SessionLocal()
@@ -170,6 +171,39 @@ def get_manga(manga_id: int):
     }
 
     return manga_data
+
+# Endpoint for updating manga by id
+@app.put("/update_manga/{manga_id}")
+def update_manga(
+    manga_id: int,
+    name: str = Form(...),
+    description: str = Form(...),
+    tags: str = Form(...),
+    manga_type: str = Form(...),
+    cover_image: UploadFile = File(...),
+    current_user: int = Depends(get_current_user)
+):
+    # Read the binary data of the image
+    cover_data = cover_image.file.read()
+
+    # Update manga in the database
+    session = SessionLocal()
+    manga = session.query(MangaDB).filter(MangaDB.id == manga_id).first()
+
+    if not manga:
+        raise HTTPException(status_code=404, detail="Manga not found")
+
+    # Update manga properties
+    manga.name = name
+    manga.description = description
+    manga.tags = tags
+    manga.manga_type = manga_type
+    manga.cover = cover_data
+
+    session.commit()
+    session.close()
+
+    return {"message": "Manga updated successfully"}
 
 # Create a JWT token with the user's username as the subject (sub)
 def create_access_token(user_id: int):
