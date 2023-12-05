@@ -44,8 +44,8 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"
 
-@app.get("/register/username={username}&email={email}&password={password}")
-def register_user(username: str, email: str, password: str):
+@app.post("/register/")
+def register_user(username: str = Form(...), email: str = Form(...), password: str = Form(...)):
     # Check if the username and email are unique
     session = SessionLocal()
     existing_user = session.query(User).filter(
@@ -68,8 +68,8 @@ def register_user(username: str, email: str, password: str):
     return {"message": "User registered successfully"}
 
 # Retrieve the user from the database by username
-@app.get("/login/username={username}&password={password}")
-def login_user(username: str, password: str, request: Request):
+@app.post("/login/")
+def login_user(request: Request, username: str = Form(...), password: str = Form(...)):
     session = SessionLocal()
     user = session.query(User).filter(User.username == username).first()
     session.close()
