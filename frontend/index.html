@@ -128,6 +128,10 @@
         function logout() {
             localStorage.removeItem('access_token');
             document.getElementById("profile").style.display = "none";
+            document.getElementById("create-manga-title").style.display = "none";
+            document.getElementById("create-manga-form").style.display = "none";
+            document.getElementById("update-manga-title").style.display = "none";
+            document.getElementById("update-manga-form").style.display = "none";
             // Show login and registration forms again
             document.getElementById("login-form").style.display = "block";
             document.getElementById("registration-form").style.display = "block";
