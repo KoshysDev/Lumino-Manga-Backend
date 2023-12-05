@@ -1,7 +1,9 @@
+import base64
 import os
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request, File, UploadFile, Form
 from datetime import datetime, timedelta
+from requests import Session
 from sqlalchemy import create_engine, Column, Integer, String
 from sqlalchemy.orm import sessionmaker
 from passlib.context import CryptContext
@@ -23,7 +25,7 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can replace "*" with your frontend URL
+    allow_origins=["*"],  # You can replace "*" with frontend URL
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -119,11 +121,61 @@ def get_user_profile(current_user: int = Depends(get_current_user)):
     
     return user_data
 
+## manga section - refactor after
+
+@app.post("/create_manga/")
+def create_manga(
+        name: str = Form(...),
+        description: str = Form(...),
+        tags: str = Form(...),
+        manga_type: str = Form(...),
+        cover_image: UploadFile = File(...),
+        current_user: int = Depends(get_current_user)
+):
+    # Read the binary data of the image
+    cover_data = cover_image.file.read()
+
+    # Create manga in the database
+    session = SessionLocal()
+    manga = MangaDB(
+        name=name,
+        description=description,
+        tags=tags,
+        manga_type=manga_type,
+        cover=cover_data,
+    )
+    session.add(manga)
+    session.commit()
+    session.close()
+
+    return {"message": "Manga uploaded successfully"}    
+
+@app.get("/manga/{manga_id}")
+def get_manga(manga_id: int):
+    session = SessionLocal()
+    manga = session.query(MangaDB).filter(MangaDB.id == manga_id).first()
+    session.close()
+
+    if not manga:
+        raise HTTPException(status_code=404, detail="Manga not found")
+
+    # Convert the manga object to a dictionary
+    manga_data = {
+        "id": manga.id,
+        "name": manga.name,
+        "description": manga.description,
+        "tags": manga.get_tags(),
+        "manga_type": manga.manga_type,
+        "cover_image": base64.b64encode(manga.cover).decode('utf-8') if manga.cover else None,
+    }
+
+    return manga_data
+
 # Create a JWT token with the user's username as the subject (sub)
 def create_access_token(user_id: int):
     payload = {
         "sub": user_id,
-        "exp": datetime.utcnow() + timedelta(minutes=1)  # Expiration time
+        "exp": datetime.utcnow() + timedelta(days=30)  # Expiration time
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     return token

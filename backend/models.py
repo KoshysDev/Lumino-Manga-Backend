@@ -26,4 +26,11 @@ class MangaDB(Base):
         self.tags = json.dumps(tags)
 
     def get_tags(self):
-        return json.loads(self.tags) if self.tags else []
+        try:
+            if self.tags:
+                # Split the string into a list of tags
+                return [tag.strip() for tag in self.tags.split(',')]
+            else:
+                return []
+        except json.JSONDecodeError:
+            return []
