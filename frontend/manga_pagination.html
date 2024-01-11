@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manga List</title>
+    <style>
+        .manga-container {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px;
+            width: 200px;
+            display: inline-block;
+            vertical-align: top;
+        }
+
+        .manga-image {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .manga-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .manga-description {
+            font-size: 14px;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Manga List</h1>
+
+    <div id="manga-list"></div>
+    <div id="pagination" class="pagination">
+        <label for="itemsPerPage">Items per page:</label>
+        <select id="itemsPerPage" onchange="updateMangaList()">
+            <option value="1">1</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+        </select>
+        <div>
+            <button onclick="prevPage()" id="prevButton" disabled>Previous</button>
+            <span id="currentPage">1</span>
+            <button onclick="nextPage()" id="nextButton">Next</button>
+        </div>
+    </div>
+
+    <script>
+        const backendURL = 'http://127.0.0.1:8000'; // Replace with your actual backend URL
+        let currentPage = 1;
+        let itemsPerPage = 10;
+        let totalMangaCount = 0;
+
+        async function fetchMangaList() {
+            try {
+                console.log(`Fetching manga list. Page: ${currentPage}, Items per page: ${itemsPerPage}`);
+                const response = await fetch(`${backendURL}/manga?page=${currentPage}&limit=${itemsPerPage}`);
+                const mangaList = await response.json();
+                console.log('Response:', response);
+                console.log('Manga List:', mangaList);
+                
+
+                const mangaListContainer = document.getElementById("manga-list");
+                mangaListContainer.innerHTML = ""; // Clear previous content
+
+                mangaList.forEach((manga) => {
+                    const mangaContainer = document.createElement("div");
+                    mangaContainer.className = "manga-container";
+
+                    if (manga.cover_image) {
+                        const mangaImage = document.createElement("img");
+                        mangaImage.src = `data:image/png;base64, ${manga.cover_image}`;
+                        mangaImage.alt = "Manga Cover";
+                        mangaImage.className = "manga-image";
+                        mangaContainer.appendChild(mangaImage);
+                    }
+
+                    const mangaTitle = document.createElement("div");
+                    mangaTitle.className = "manga-title";
+                    mangaTitle.textContent = manga.name;
+                    mangaContainer.appendChild(mangaTitle);
+
+                    const mangaDescription = document.createElement("div");
+                    mangaDescription.className = "manga-description";
+                    mangaDescription.textContent = manga.description;
+                    mangaContainer.appendChild(mangaDescription);
+
+                    mangaListContainer.appendChild(mangaContainer);
+                });
+
+                updatePagination();
+            } catch (error) {
+                console.error('Error fetching manga list:', error);
+            }
+        }
+
+
+        function updatePagination() {
+            const totalPages = Math.ceil(totalMangaCount / itemsPerPage);
+            document.getElementById("currentPage").textContent = currentPage;
+            document.getElementById("prevButton").disabled = currentPage === 1;
+            document.getElementById("nextButton").disabled = currentPage === totalPages;
+        }
+
+        function updateMangaList() {
+            itemsPerPage = parseInt(document.getElementById("itemsPerPage").value, 10);
+            currentPage = 1;
+            fetchMangaList();
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchMangaList();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(totalMangaCount / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchMangaList();
+            }
+        }
+
+        fetch(`${backendURL}/manga_count`)
+            .then(response => response.json())
+            .then(data => {
+                totalMangaCount = data.count;
+                fetchMangaList();
+            })
+            .catch(error => console.error('Error fetching total manga count:', error));
+    </script>
+</body>
+
+</html>
