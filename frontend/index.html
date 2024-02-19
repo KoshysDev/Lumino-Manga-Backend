@@ -240,7 +240,7 @@
             const token = localStorage.getItem('access_token');
 
             try {
-                const response = await fetch(`${backendURL}/manga/${mangaId}`, {
+                const response = await fetch(`${backendURL}/manga/by_id/${mangaId}`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,

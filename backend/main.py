@@ -143,6 +143,7 @@ def get_user_profile(current_user: int = Depends(get_current_user)):
 
 
 # manga section - refactor after
+# Update the create and update operations to calculate and store the slug
 @app.post("/create_manga/")
 def create_manga(
     name: str = Form(...),
@@ -163,7 +164,8 @@ def create_manga(
         tags=tags,
         manga_type=manga_type,
         cover=cover_data,
-    )  # type: ignore
+        slug=MangaDB.generate_slug(name),  # Calculate and store the slug
+    )
     session.add(manga)
     session.commit()
     session.close()
@@ -172,11 +174,38 @@ def create_manga(
 
 
 # Endpoint for geting manga by id
-@app.get("/manga/{manga_id}")
+@app.get("/manga/by_id/{manga_id}")
 def get_manga(manga_id: int):
     session = SessionLocal()
     manga = (
         session.query(MangaDB).filter(MangaDB.id == manga_id).first()  # type: ignore
+    )  # type: ignore
+    session.close()
+
+    if not manga:
+        raise HTTPException(status_code=404, detail="Manga not found")
+
+    # Convert the manga object to a dictionary
+    manga_data = {
+        "id": manga.id,
+        "name": manga.name,
+        "description": manga.description,
+        "tags": manga.get_tags(),
+        "manga_type": manga.manga_type,
+        "cover_image": (
+            base64.b64encode(manga.cover).decode("utf-8") if manga.cover else None
+        ),
+    }
+
+    return manga_data
+
+from fastapi import Path
+
+@app.get("/manga/{slug}")
+def get_manga_by_slug(slug: str = Path(...)):
+    session = SessionLocal()
+    manga = (
+        session.query(MangaDB).filter(MangaDB.slug == slug).first()  # type: ignore
     )  # type: ignore
     session.close()
 
@@ -205,19 +234,17 @@ def get_total_manga_count():
     session.close()
     return JSONResponse(content={"count": total_count})
 
+
 # get all manga by pagination, using offset(how many to skip) and limit(how many to display)
 @app.get("/manga")
-def get_manga_list(
-    page: int = Query(1, ge=1),
-    limit: int = Query(10, le=100)
-):
+def get_manga_list(page: int = Query(1, ge=1), limit: int = Query(10, le=100)):
     session = SessionLocal()
 
     # Calculate the offset based on the page and limit
     offset = (page - 1) * limit
 
     # Query the database for manga with pagination
-    manga_list = session.query(MangaDB).offset(offset).limit(limit).all() # type: ignore
+    manga_list = session.query(MangaDB).offset(offset).limit(limit).all()  # type: ignore
 
     session.close()
 
@@ -237,6 +264,7 @@ def get_manga_list(
         manga_data_list.append(manga_data)
 
     return manga_data_list
+
 
 # Endpoint for updating manga by id
 @app.put("/update_manga/{manga_id}")
@@ -267,6 +295,7 @@ def update_manga(
     manga.tags = tags
     manga.manga_type = manga_type
     manga.cover = cover_data
+    manga.slug = MangaDB.generate_slug(name)  # Recalculate and store the slug
 
     session.commit()
     session.close()

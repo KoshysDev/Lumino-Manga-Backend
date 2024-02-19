@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, LargeBinary, Text
 from sqlalchemy.ext.declarative import declarative_base
 import json
+import re
 
 Base = declarative_base()
 
@@ -21,6 +22,7 @@ class MangaDB(Base):
     description = Column(Text)  # manga description
     tags = Column(String)  # tags for the manga (serialized as a string)
     manga_type = Column(String)  # type for the manga
+    slug = Column(String, unique=True, index=True)  # Slug for URL
 
     def set_tags(self, tags):
         self.tags = json.dumps(tags)
@@ -34,3 +36,10 @@ class MangaDB(Base):
                 return []
         except json.JSONDecodeError:
             return []
+
+    @staticmethod
+    def generate_slug(name):
+        # Remove special characters, convert spaces to hyphens, and convert to lowercase
+        slug = re.sub(r"[^\w\s-]", "", name).strip().lower()
+        slug = re.sub(r"[-\s]+", "-", slug)
+        return slug
