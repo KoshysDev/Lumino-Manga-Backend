@@ -5,4 +5,4 @@ python-dotenv
 passlib
 pyjwt
 psycopg2
-bcrypt
+bcrypt==3.2.2
