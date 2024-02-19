@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from models import User, MangaDB
 import jwt
+from typing import Optional
 
 # this file must be refactored, after i done main job
 
@@ -57,15 +58,23 @@ ALGORITHM = "HS256"
 
 @app.post("/register/")
 def register_user(
-    username: str = Form(...), email: str = Form(...), password: str = Form(...)
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    avatar: UploadFile = File(None),
+    nickname: str = Form(None),
+    description: str = Form(None),
+    role: str = Form(None),
+    tags: str = Form(None),
+    social_links: str = Form(None),
 ):
     # Check if the username and email are unique
     session = SessionLocal()
     existing_user = (
         session.query(User)
-        .filter((User.username == username) | (User.email == email))  # type: ignore
+        .filter((User.username == username) | (User.email == email))
         .first()
-    )  # type: ignore
+    )
     if existing_user:
         raise HTTPException(
             status_code=400, detail="Username or email already registered"
@@ -76,12 +85,24 @@ def register_user(
 
     # Create a new user
     new_user = User(
-        username=username, email=email, hashed_password=hashed_password
-    )  # type: ignore
+        username=username,
+        email=email,
+        hashed_password=hashed_password,
+        nickname=nickname or username,  # Set the nickname to username if not provided
+        description=description,
+        role=role,
+        tags=tags,
+        social_links=social_links,
+    )
+
+    # Process and store avatar image if provided
+    if avatar:
+        new_user.avatar = avatar.file.read()
 
     session.add(new_user)
     session.commit()
     session.close()
+
     return {"message": "User registered successfully"}
 
 
@@ -125,7 +146,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 @app.get("/profile")
 def get_user_profile(current_user: int = Depends(get_current_user)):
     session = SessionLocal()
-    user = session.query(User).filter(User.id == current_user).first()  # type: ignore
+    user = session.query(User).filter(User.id == current_user).first()
     session.close()
 
     if not user:
@@ -136,10 +157,60 @@ def get_user_profile(current_user: int = Depends(get_current_user)):
         "id": user.id,
         "username": user.username,
         "email": user.email,
+        "avatar": (
+            base64.b64encode(user.avatar).decode("utf-8") if user.avatar else None
+        ),  # Encode avatar image to base64 if available
+        "nickname": user.nickname,
+        "description": user.description,
+        "role": user.role,
+        "tags": user.tags,
+        "social_links": user.social_links,
         # Add other fields as needed
     }
 
     return user_data
+
+
+@app.put("/update_profile")
+def update_user_profile(
+    nickname: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    avatar: Optional[UploadFile] = File(None),
+    email: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+    role: Optional[str] = Form(None),
+    tags: Optional[str] = Form(None),
+    social_links: Optional[str] = Form(None),
+    current_user: int = Depends(get_current_user),
+):
+    session = SessionLocal()
+    user = session.query(User).filter(User.id == current_user).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update user details
+    if nickname is not None:
+        user.nickname = nickname
+    if description is not None:
+        user.description = description
+    if avatar:
+        user.avatar = avatar.file.read()
+    if email is not None:
+        user.email = email
+    if password is not None:
+        hashed_password = pwd_context.hash(password)
+        user.hashed_password = hashed_password
+    if role is not None:
+        user.role = role
+    if tags is not None:
+        user.tags = tags
+    if social_links is not None:
+        user.social_links = social_links
+
+    session.commit()
+    session.close()
+
+    return {"message": "User profile updated successfully"}
 
 
 # manga section - refactor after
@@ -199,7 +270,9 @@ def get_manga(manga_id: int):
 
     return manga_data
 
+
 from fastapi import Path
+
 
 @app.get("/manga/{slug}")
 def get_manga_by_slug(slug: str = Path(...)):
@@ -219,12 +292,13 @@ def get_manga_by_slug(slug: str = Path(...)):
         "description": manga.description,
         "tags": manga.get_tags(),
         "manga_type": manga.manga_type,
-        "cover_image": base64.b64encode(manga.cover).decode("utf-8")
-        if manga.cover
-        else None,
+        "cover_image": (
+            base64.b64encode(manga.cover).decode("utf-8") if manga.cover else None
+        ),
     }
 
     return manga_data
+
 
 # Endpoint to get the total number of manga
 @app.get("/manga_count")

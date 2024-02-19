@@ -106,11 +106,44 @@
     <!-- User Profile Section -->
     <h2>User Profile</h2>
     <div id="profile" style="display: none;">
+        <div id="avatar-container"></div>
+        <p><strong>Displayname:</strong> <span id="profile-displayname"></span></p>
         <p><strong>Username:</strong> <span id="profile-username"></span></p>
         <p><strong>Email:</strong> <span id="profile-email"></span></p>
         <!-- Add more user profile fields as needed -->
         <button id="logout-button">Logout</button>
     </div>
+
+    <!-- Update User Profile Form -->
+    <h2>Update Profile</h2>
+    <form id="update-profile-form" enctype="multipart/form-data">
+        <label for="update-nickname">Nickname:</label>
+        <input type="text" id="update-nickname" name="nickname"><br>
+
+        <label for="update-description">Description:</label>
+        <textarea id="update-description" name="description"></textarea><br>
+
+        <label for="update-avatar">Avatar:</label>
+        <input type="file" id="update-avatar" name="avatar"><br>
+
+        <label for="update-email">Email:</label>
+        <input type="email" id="update-email" name="email"><br>
+
+        <label for="update-password">Password:</label>
+        <input type="password" id="update-password" name="password"><br>
+
+        <label for="update-role">Role:</label>
+        <input type="text" id="update-role" name="role"><br>
+
+        <label for="update-tags">Tags:</label>
+        <input type="text" id="update-tags" name="tags"><br>
+
+        <label for="update-social-links">Social Links:</label>
+        <input type="text" id="update-social-links" name="social_links"><br>
+
+        <button type="button" onclick="updateUserProfile()">Update Profile</button>
+    </form>
+
 
     <script>
         const backendURL = 'http://127.0.0.1:8000'; // Replace with your actual backend URL
@@ -155,6 +188,7 @@
 
                 if (response.status === 200) {
                     const userData = await response.json();
+                    document.getElementById("profile-displayname").textContent = userData.nickname;
                     document.getElementById("profile-username").textContent = userData.username;
                     document.getElementById("profile-email").textContent = userData.email;
                     document.getElementById("profile").style.display = "block";
@@ -162,12 +196,51 @@
                     document.getElementById("create-manga-form").style.display = "block";
                     document.getElementById("update-manga-title").style.display = "block";
                     document.getElementById("update-manga-form").style.display = "block";
+
+                    // Display avatar
+                    const coverImageContainer = document.getElementById("avatar-container");
+                    coverImageContainer.innerHTML = "";  // Clear previous content
+
+                    if (userData.avatar) {
+                        const coverImage = document.createElement("img");
+                        coverImage.src = `data:image/png;base64, ${userData.avatar}`;
+                        coverImage.alt = "Cover Image";
+                        coverImage.style.maxWidth = "100%";
+                        coverImageContainer.appendChild(coverImage);
+                    } //else display default avatar
                 } else {
                     alert('Token has expired');
                     localStorage.removeItem('access_token');
                 }
             } catch (error) {
                 console.error('Error fetching user profile:', error);
+            }
+        }
+
+        // Function to update user profile
+        async function updateUserProfile() {
+            const formData = new FormData(document.getElementById("update-profile-form"));
+            const token = localStorage.getItem('access_token');
+            const requestOptions = {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: formData,
+            };
+
+            try {
+                const response = await fetch(`${backendURL}/update_profile`, requestOptions);
+                if (response.status === 200) {
+                    alert('User profile updated successfully!');
+                    // Reload user profile data after update
+                    await displayUserProfile(token);
+                } else {
+                    const data = await response.json();
+                    alert(`Failed to update user profile: ${data.detail}`);
+                }
+            } catch (error) {
+                console.error('Error updating user profile:', error);
             }
         }
 

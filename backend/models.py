@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, LargeBinary, Text
+from sqlalchemy import Column, Integer, String, LargeBinary, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 import json
 import re
@@ -12,6 +13,22 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    avatar = Column(LargeBinary)  # Binary data for the user's avatar image
+    nickname = Column(String)  # Nickname for the user
+    description = Column(Text)  # Description for the user profile
+    role = Column(String)  # Role of the user (user, admin, author, etc.)
+    tags = Column(String)  # Tags associated with the user (serialized as a string)
+    social_links = Column(String)  # Social links associated with the user (serialized as a string)
+    favorites = relationship("Favorite", back_populates="user")  # Relationship with Favorite model
+
+class Favorite(Base):
+    __tablename__ = "favorites"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))  # Foreign key relationship with users table
+    manga_id = Column(Integer, ForeignKey('mangadb.id'))  # Foreign key relationship with mangadb table
+    user = relationship("User", back_populates="favorites")  # Relationship with User model
+
 
 class MangaDB(Base):
     __tablename__ = "mangadb"
